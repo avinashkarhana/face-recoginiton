@@ -1,32 +1,34 @@
-import numpy as np
-import os
 import cv2
-
-face_cascade= cv2.CascadeClassifier("haarcascades/haarcascade_frontalface_alt.xml")
-
-img=cv2.imread('Avinash.jpg',cv2.IMREAD_COLOR)
-cv2.circle(img,(150,150),55,(0,0,255),-1)
-cv2.imshow("img",img)
-
-#foracc=cv2.VideoWriter_fourcc(*'MPEG')
-cap = cv2.VideoCapture(0)
-#out = cv2.VideoWriter("file.mp4", foracc, 10,(1280,720) )
+import numpy as np
+import csv
+facedetect=cv2.CascadeClassifier("haarcascades/haarcascade_frontalface_alt.xml")
+cam=cv2.VideoCapture(0)
+recog = cv2.face.LBPHFaceRecognizer_create()
+recog.read('recog/traingdata.yml')
+id=0
+font = cv2.FONT_HERSHEY_SIMPLEX
+fontScale = 1
+fontColor = (255,255,255)
+lineType = 2
+id_name="Unknown"
 while True:
-    ret, frame = cap.read()
-    frame=cv2.flip(frame,1)
-    gray = cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)
-    faces = face_cascade.detectMultiScale(gray,scaleFactor=1.5,minNeighbors=5)
-    for (x, y, w, h) in faces: 
-    	roi_color = frame[y:y+h, x:x+w]
-    	color = (255, 0, 0)
-    	stroke = 2
-    	end_cord_x = x + w
-    	end_cord_y = y + h
-    	cv2.rectangle(frame, (x, y), (end_cord_x, end_cord_y), color, stroke)
-    cv2.imshow('frame',frame)
-   # out.write(frame)
-    if cv2.waitKey(1) & 0xFF == ord('q'):
+    ret,img=cam.read()
+    img=cv2.flip(img,1)
+    gray=cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+    faces=facedetect.detectMultiScale(gray,scaleFactor=1.5,minNeighbors=5)
+    for (x,y,w,h) in faces:
+        cv2.rectangle(img,(x,y),(x+w,y+h),(258,0,245),5)
+        id,conf=recog.predict(gray[y:y+h,x:x+w])
+        print(id)
+        if id=='':id=0
+        with open('dataset/facelist.csv') as csvfile:
+            readCSV = csv.reader(csvfile, delimiter=',')
+            for row in readCSV:
+                if row[0]==str(id) and conf<100:id_name=str(row[1])+"  #"+str(conf)
+                else:id_name="Unknown"
+        cv2.putText(img,str(id_name),(x,y+h),font,fontScale,fontColor,lineType)
+    cv2.imshow("face",img)
+    if cv2.waitKey(1)==ord('q') :
         break
-cap.release()
-#out.release()
+cam.release()
 cv2.destroyAllWindows()
